@@ -32,7 +32,7 @@
     <#--  接入说明  -->
     <div class="page-header">
         <h1>接入说明</h1>
-        本文档针对前端项目接入 kkFileView 的说明，并假设 kkFileView 的服务地址为：http://127.0.0.1:8012。
+        本文档针对前端项目接入 kkFileView 的说明，并假设 kkFileView 的服务地址为：${baseUrl}。
     </div>
     <div class="well">
 
@@ -40,7 +40,7 @@
             【http/https 资源文件预览】如果你的项目需要接入文件预览项目，达到对docx、excel、ppt、jpg等文件的预览效果，那么通过在你的项目中加入下面的代码就可以成功实现：
             <p style="background-color: #2f332a;color: #cccccc;font-size: 14px;padding:10px;margin-top:10px;">
                 var url = 'http://127.0.0.1:8080/file/test.txt'; //要预览文件的访问地址 <br>
-                window.open('http://127.0.0.1:8012/onlinePreview?url='+encodeURIComponent(base64Encode(url)));
+                window.open('${baseUrl}onlinePreview?url='+encodeURIComponent(base64Encode(url)));
             </p>
         </div>
         <br>
@@ -49,7 +49,7 @@
             <p style="background-color: #2f332a;color: #cccccc;font-size: 14px;padding:10px;margin-top:10px;">
                 var originUrl = 'http://127.0.0.1:8080/filedownload?fileId=1'; //要预览文件的访问地址<br>
                 var previewUrl = originUrl + '&fullfilename=test.txt'<br>
-                window.open('http://127.0.0.1:8012/onlinePreview?url='+encodeURIComponent(Base64.encode(previewUrl)));
+                window.open('${baseUrl}onlinePreview?url='+encodeURIComponent(Base64.encode(previewUrl)));
             </p>
         </div>
         <br>
@@ -57,7 +57,7 @@
             【ftp 资源文件预览】如果要预览的FTP url是可以匿名访问的（不需要用户名密码），则可以直接通过下载url预览，示例如下
             <p style="background-color: #2f332a;color: #cccccc;font-size: 14px;padding:10px;margin-top:10px;">
                 var url = 'ftp://127.0.0.1/file/test.txt'; //要预览文件的访问地址<br>
-                window.open('http://127.0.0.1:8012/onlinePreview?url='+encodeURIComponent(Base64.encode(url)));
+                window.open('${baseUrl}onlinePreview?url='+encodeURIComponent(Base64.encode(url)));
             </p>
         </div>
         <br>
@@ -66,7 +66,7 @@
             <p style="background-color: #2f332a;color: #cccccc;font-size: 14px;padding:10px;margin-top:10px;">
                 var originUrl = 'ftp://127.0.0.1/file/test.txt'; //要预览文件的访问地址<br>
                 var previewUrl = originUrl + '?ftp.username=xx&ftp.password=xx&ftp.control.encoding=xx';<br>
-                window.open('http://127.0.0.1:8012/onlinePreview?url='+encodeURIComponent(Base64.encode(previewUrl)));
+                window.open('${baseUrl}onlinePreview?url='+encodeURIComponent(Base64.encode(previewUrl)));
             </p>
         </div>
     </div>

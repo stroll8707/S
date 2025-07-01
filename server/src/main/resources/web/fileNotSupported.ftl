@@ -33,12 +33,26 @@
 
 <body>
 <div class="container">
-    <img src="images/sorry.jpg"/>
+    <a name="download" title="点击下载文件"><img src="images/sorry.jpg"/></a>
     <span>
-        该(${fileType})文件，系统暂不支持在线预览，具体原因如下：
+        该(${fileType})<a name="download" title="点击下载文件">文件</a>，系统暂不支持在线预览，具体原因如下：
         <p style="color: red;">${msg}</p>
+    </span>
+    <span>
+        你可以&nbsp;<a name="download" title="点击下载文件">下载</a>&nbsp;文件（&nbsp;<a id="file" name="download" title="点击下载文件"></a>&nbsp;）本地查看。
     </span>
     <p>有任何疑问，请加入kk开源社区知识星球咨询：<a href="https://t.zsxq.com/09ZHSXbsQ">https://t.zsxq.com/09ZHSXbsQ</a><br></p>
 </div>
+<script type="text/javascript">
+    document.addEventListener('DOMContentLoaded', function () {
+        var downloads = document.querySelectorAll('[name="download"]');
+        downloads.forEach(function (download) {
+            download.href = atob(decodeURI(new URL(location.href).searchParams.get('url')));
+            if(download.id === 'file'){
+                download.innerText = download.href;
+            }
+        });
+    });
+</script>
 </body>
 </html>

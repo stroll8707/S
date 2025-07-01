@@ -13,6 +13,7 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.util.FileCopyUtils;
 
@@ -51,11 +52,19 @@ public class TrustHostFilter implements Filter {
     }
 
     public boolean isNotTrustHost(String host) {
-        if (CollectionUtils.isNotEmpty(ConfigConstants.getNotTrustHostSet())) {
-            return ConfigConstants.getNotTrustHostSet().contains(host);
-        }
-        if (CollectionUtils.isNotEmpty(ConfigConstants.getTrustHostSet())) {
-            return !ConfigConstants.getTrustHostSet().contains(host);
+        while(StringUtils.isNotBlank(host)){
+            if (CollectionUtils.isNotEmpty(ConfigConstants.getNotTrustHostSet()) && ConfigConstants.getNotTrustHostSet().contains(host)) {
+                return true;
+            }
+            if (CollectionUtils.isNotEmpty(ConfigConstants.getTrustHostSet()) && ConfigConstants.getTrustHostSet().contains(host)) {
+                return false;
+            }
+            //try sub domain
+            if (host.contains(".")) {
+                host = host.substring(host.indexOf(".")+1);
+            } else {
+                return false;
+            }
         }
         return false;
     }

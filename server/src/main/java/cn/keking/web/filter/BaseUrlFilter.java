@@ -48,7 +48,9 @@ public class BaseUrlFilter implements Filter {
             baseUrl = configBaseUrl;
         } else {
             //3、默认动态拼接 baseUrl
-            baseUrl = request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort()
+            String port = (("https".equals(request.getScheme()) &&  request.getServerPort() == 443)) || ("http".equals(request.getScheme()) &&  request.getServerPort() == 80)
+                    ? "" : ":" + request.getServerPort();
+            baseUrl = request.getScheme() + "://" + request.getServerName() + port
                     + servletRequest.getContextPath() + "/";
         }
 
