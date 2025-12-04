@@ -40,6 +40,7 @@ public class AttributeSetFilter implements Filter {
         request.setAttribute("pdfDisableEditing", ConfigConstants.getPdfDisableEditing());
         request.setAttribute("switchDisabled", ConfigConstants.getOfficePreviewSwitchDisabled());
         request.setAttribute("fileUploadDisable", ConfigConstants.getFileUploadDisable());
+        request.setAttribute("enableDelete", true);
         request.setAttribute("beian", ConfigConstants.getBeian());
         request.setAttribute("size", ConfigConstants.maxSize());
         request.setAttribute("deleteCaptcha", ConfigConstants.getDeleteCaptcha());

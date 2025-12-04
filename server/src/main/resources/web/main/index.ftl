@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="bootstrap/css/bootstrap.min.css"/>
     <link rel="stylesheet" href="bootstrap-table/bootstrap-table.min.css"/>
     <link rel="stylesheet" href="css/theme.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"/>
     <script type="text/javascript" src="js/jquery-3.6.1.min.js"></script>
     <script type="text/javascript" src="js/jquery.form.min.js"></script>
     <script type="text/javascript" src="bootstrap/js/bootstrap.min.js"></script>
@@ -145,7 +146,7 @@
         <div class="panel-body">
             <#if fileUploadDisable == false>
                 <form enctype="multipart/form-data" id="fileUpload">
-                    <input type="file" id="file" name="file" style="float: left; margin: 0 auto; font-size:22px;" placeholder="请选择文件"/>
+                    <input type="file" id="file" name="files" style="float: left; margin: 0 auto; font-size:22px;" placeholder="请选择文件" multiple/>
                     <input type="button" id="fileUploadBtn" class="btn btn-success" value=" 上 传 "/>
                 </form>
             <#else>
@@ -161,6 +162,9 @@
                     </p>
                 </div>
             </#if>
+            <div style="margin-top: 20px; margin-bottom: 10px;">
+                <button id="batchDeleteBtn" class="btn btn-danger" disabled>批量删除</button>
+            </div>
             <table id="table" data-pagination="true"></table>
         </div>
     </div>
@@ -201,22 +205,80 @@
             $("#deleteCaptchaImg").attr("src","${baseUrl}deleteFile/captcha?timestamp=" + new Date().getTime());
         });
         $("#deleteCaptchaConfirmBtn").click(function() {
-            var fileName = $("#deleteCaptchaFileName").val();
-            var deleteCaptchaText = $("#deleteCaptchaText").val();
-            $.get('${baseUrl}deleteFile?fileName=' + fileName +'&password=' + deleteCaptchaText, function(data){
-                if ("删除文件失败，密码错误！" === data.msg) {
-                    alert(data.msg);
-                } else {
-                    $('#table').bootstrapTable("refresh", {});
-                    $("#deleteCaptchaText").val("");
-                    $("#deleteCaptchaModal").modal("hide");
+            var captcha = $("#deleteCaptchaText").val();
+            var isBatch = $(this).data("isBatch");
+            
+            if (!captcha) {
+                alert("请输入验证码");
+                return;
+            }
+            
+            if (isBatch) {
+                // 批量删除处理
+                var fileNames = $("#deleteCaptchaModal").data("fileNames");
+                if (!fileNames || fileNames.length === 0) {
+                    alert("未找到要删除的文件");
+                    return;
                 }
-            });
+                
+                $.ajax({
+                    url: '${baseUrl}batchDeleteFiles',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        fileNames: fileNames,
+                        password: captcha
+                    }),
+                    success: function(data) {
+                        $("#deleteCaptchaModal").modal("hide");
+                        if (data.code !== 0) {
+                            alert(data.msg);
+                        } else {
+                            var result = data.content;
+                            var message = "成功删除 " + result.success + " 个文件";
+                            if (result.failure > 0) {
+                                message += "，" + result.failure + " 个文件删除失败";
+                            }
+                            alert(message);
+                            $('#table').bootstrapTable("refresh", {});
+                        }
+                    },
+                    error: function() {
+                        $("#deleteCaptchaModal").modal("hide");
+                        alert("删除失败，请联系管理员");
+                    }
+                });
+            } else {
+                // 单个文件删除
+                var fileName = $("#deleteCaptchaModal").data("fileName");
+                if (!fileName) {
+                    alert("未找到要删除的文件");
+                    return;
+                }
+                
+                $.ajax({
+                    url: '${baseUrl}deleteFile?fileName=' + fileName + '&password=' + captcha,
+                    success: function(data) {
+                        $("#deleteCaptchaModal").modal("hide");
+                        if (data.code !== 0) {
+                            alert(data.msg);
+                        } else {
+                            alert("删除成功");
+                            $('#table').bootstrapTable("refresh", {});
+                        }
+                    },
+                    error: function() {
+                        $("#deleteCaptchaModal").modal("hide");
+                        alert("删除失败，请联系管理员");
+                    }
+                });
+            }
         });
         function deleteFile(fileName) {
             $("#deleteCaptchaImg").click();
             $("#deleteCaptchaFileName").val(fileName);
             $("#deleteCaptchaText").val("");
+            $("#deleteCaptchaConfirmBtn").data("isBatch", false);
             $("#deleteCaptchaModal").modal("show");
         }
     <#else>
@@ -275,24 +337,137 @@
             pagination: ${homePagination}, //是否分页
             pageList: [5, 10, 20, 30, 50, 100, 200, 500],
             search: ${homeSearch}, //显示查询框
+            sortName: 'uploadTime',  // 默认按上传时间排序
+            sortOrder: 'desc',       // 默认降序排序
+            sortStable: true,        // 启用稳定排序
+            checkboxHeader: true,    // 显示全选复选框
+            clickToSelect: true,     // 点击行时选中复选框
             columns: [{
-                field: 'fileName',
-                title: '文件名'
+                checkbox: true       // 添加复选框列
             }, {
-                field: 'action',
+                field: 'fileName',
+                title: '文件名',
+                sortable: true
+            }, {
+                field: 'uploadTime',
+                title: '上传时间',
+                sortable: true
+            }, {
+                field: 'operation',
                 title: '操作',
-                align: 'center',
-                width: 160
+                formatter: function(value, row) {
+                    // 预览按钮
+                    var openBtn = [
+                        '<button class="open btn btn-success btn-xs" title="预览">',
+                        '<i class="fa fa-eye"></i> 预览',
+                        '</button>'
+                    ];
+                    
+                    // 下载按钮
+                    var downloadBtn = [
+                        '<button class="download btn btn-primary btn-xs" style="margin-left:10px;" title="下载">',
+                        '<i class="fa fa-download"></i> 下载',
+                        '</button>'
+                    ];
+                    
+                    // 删除按钮
+                    var deleteBtn = 
+                    <#if enableDelete>
+                    [
+                        '<button class="delete btn btn-danger btn-xs" style="margin-left:10px;" title="删除">',
+                        '<i class="fa fa-trash"></i> 删除',
+                        '</button>'
+                    ]
+                    <#else>
+                    [
+                        '<button class="delete btn btn-danger btn-xs" style="margin-left:10px;" disabled="disabled" title="删除">',
+                        '<i class="fa fa-trash"></i> 删除',
+                        '</button>'
+                    ]
+                    </#if>;
+                    // 拼接所有按钮
+                    return openBtn.join("") + downloadBtn.join("") + deleteBtn.join("");
+                },
+                events: {
+                    'click .open': function (e, value, row, index) {
+                        var filePath = "";
+                        if (row.fileName) {
+                            // 从fileName解析文件路径，假设fileName包含完整路径
+                            filePath = row.fileName;
+                            
+                            // 如果存在fileDir属性则使用它（向后兼容）
+                            if (row.fileDir) {
+                                filePath = row.fileDir.replace(/\\/g,"").toString() + 
+                                  (row.fileName.indexOf("/") > -1 ? row.fileName.substring(row.fileName.lastIndexOf("/")+1) : row.fileName);
+                            }
+                        } else {
+                            // 兜底逻辑
+                            filePath = row.name || "";
+                        }
+
+                        window.open('${baseUrl}onlinePreview?url=' + encodeURIComponent(Base64.encode('${baseUrl}' + filePath)));
+                    },
+                    'click .download': function (e, value, row, index) {
+                        var filePath = "";
+                        if (row.fileName) {
+                            // 从fileName解析文件路径，假设fileName包含完整路径
+                            filePath = row.fileName;
+                            
+                            // 如果存在fileDir属性则使用它（向后兼容）
+                            if (row.fileDir) {
+                                filePath = row.fileDir + (row.fileName.indexOf("/") > -1 ? row.fileName.substring(row.fileName.lastIndexOf("/")+1) : row.fileName);
+                            }
+                        } else {
+                            // 兜底逻辑
+                            filePath = row.name || "";
+                        }
+                        
+                        // 使用新的download接口
+                        window.open('${baseUrl}download?urlPath=' + encodeURIComponent(Base64.encode(filePath)));
+                    },
+                    'click .delete': function (e, value, row, index) {
+                        <#if enableDelete>
+                            var filePath = row.fileName || (row.name || "");
+                            if (row.fileDir) {
+                                filePath = row.fileDir + (row.fileName ? row.fileName : row.name);
+                            }
+                            
+                            <#if deleteCaptcha>
+                                $("#deleteCaptchaImg").click();
+                                // 仅使用Base64编码，不再二次URL编码
+                                var encodedFileName = Base64.encode('${baseUrl}' + filePath);
+                                $("#deleteCaptchaModal").data("fileName", encodedFileName);
+                                $("#deleteCaptchaConfirmBtn").data("isBatch", false);
+                                $("#deleteCaptchaText").val("");
+                                $("#deleteCaptchaModal").modal("show");
+                            <#else>
+                                var password = prompt("请输入默认密码:123456");
+                                if (!password) {
+                                    return;
+                                }
+                                // 仅使用Base64编码，不再二次URL编码
+                                var encodedFileName = Base64.encode('${baseUrl}' + filePath);
+                                $.get('${baseUrl}deleteFile?fileName=' + encodedFileName +'&password=' + password, function(data){
+                                    if ("删除文件失败，密码错误！" === data.msg) {
+                                        alert(data.msg);
+                                    } else {
+                                        $('#table').bootstrapTable("refresh", {});
+                                    }
+                                });
+                            </#if>
+                        </#if>
+                    }
+                }
             }]
         }).on('pre-body.bs.table', function (e, data) {
-            // 每个data添加一列用来操作
-            $(data).each(function (index, item) {
-                item.action = "<a class='btn btn-success' target='_blank' href='${baseUrl}onlinePreview?url=" + encodeURIComponent(Base64.encode('${baseUrl}' + item.fileName)) + "'>预览</a>" +
-                    "<a class='btn btn-danger' style='margin-left:10px;' href='javascript:void(0);' onclick='deleteFile(\"" +  encodeURIComponent(Base64.encode('${baseUrl}' + item.fileName)) + "\")'>删除</a>";
-            });
+            // 移除冗余代码，因为已经在formatter中实现了这个功能
             return data;
         }).on('post-body.bs.table', function (e, data) {
             return data;
+        }).on('check.bs.table uncheck.bs.table check-all.bs.table uncheck-all.bs.table', function () {
+            // 当选择项变化时，更新批量删除按钮状态
+            var selections = $('#table').bootstrapTable('getSelections');
+            $('#batchDeleteBtn').prop('disabled', selections.length === 0);
         });
 
         $('#previewByUrl').on('click', function () {
@@ -310,11 +485,85 @@
             window.open('${baseUrl}onlinePreview?url=' + encodeURIComponent(b64Encoded));
         });
 
+        $("#batchDeleteBtn").click(function() {
+            var selections = $('#table').bootstrapTable('getSelections');
+            if (selections.length === 0) {
+                return;
+            }
+
+            if (window.confirm('确定要删除选中的 ' + selections.length + ' 个文件吗？')) {
+                <#if deleteCaptcha>
+                    $("#deleteCaptchaImg").click();
+                    // 存储选中的文件名列表，仅使用Base64编码，不再二次URL编码
+                    var encodedFileNames = selections.map(function(item) { 
+                        var filePath = item.fileName || (item.name || "");
+                        if (item.fileDir) {
+                            filePath = item.fileDir + (item.fileName ? item.fileName : (item.name || ""));
+                        }
+                        return Base64.encode('${baseUrl}' + filePath); 
+                    });
+                    $("#deleteCaptchaModal").data("fileNames", encodedFileNames);
+                    $("#deleteCaptchaText").val("");
+                    $("#deleteCaptchaConfirmBtn").data("isBatch", true);
+                    $("#deleteCaptchaModal").modal("show");
+                <#else>
+                    var password = prompt("请输入默认密码:123456");
+                    if (!password) {
+                        return;
+                    }
+                    
+                    // 确保文件名仅使用Base64编码，不再二次URL编码
+                    var encodedFileNames = selections.map(function(item) { 
+                        var filePath = item.fileName || (item.name || "");
+                        if (item.fileDir) {
+                            filePath = item.fileDir + (item.fileName ? item.fileName : (item.name || ""));
+                        }
+                        return Base64.encode('${baseUrl}' + filePath); 
+                    });
+                    
+                    $.ajax({
+                        url: '${baseUrl}batchDeleteFiles',
+                        method: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({
+                            fileNames: encodedFileNames,
+                            password: password
+                        }),
+                        success: function(data) {
+                            if (data.code !== 0) {
+                                alert(data.msg);
+                            } else {
+                                var result = data.content;
+                                var message = "成功删除 " + result.success + " 个文件";
+                                if (result.failure > 0) {
+                                    message += "，" + result.failure + " 个文件删除失败";
+                                }
+                                alert(message);
+                                $('#table').bootstrapTable("refresh", {});
+                            }
+                        },
+                        error: function() {
+                            alert("删除失败，请联系管理员");
+                        }
+                    });
+                </#if>
+            }
+        });
+
         $("#fileUploadBtn").click(function () {
-            var filepath = $("#file").val();
-            if(!checkFileSize(filepath)) {
+            if ($("#file")[0].files.length === 0) {
+                alert("请选择要上传的文件");
                 return false;
             }
+            
+            // 检查每个文件的大小
+            var files = $("#file")[0].files;
+            for (var i = 0; i < files.length; i++) {
+                if (!checkFileSizeByFile(files[i])) {
+                    return false;
+                }
+            }
+            
             showLoadingDiv();
             $("#fileUpload").ajaxSubmit({
                 success: function (data) {
@@ -322,48 +571,45 @@
                     if (1 === data.code) {
                         alert(data.msg);
                     } else {
+                        var result = data.content;
+                        if (result.success && result.success.length > 0) {
+                            var successMsg = "成功上传 " + result.success.length + " 个文件";
+                            if (result.failure && result.failure.length > 0) {
+                                successMsg += "，" + result.failure.length + " 个文件上传失败：\n" + result.failure.join("\n");
+                            }
+                            alert(successMsg);
+                        } else if (result.failure && result.failure.length > 0) {
+                            alert("所有文件上传失败：\n" + result.failure.join("\n"));
+                        }
                         $('#table').bootstrapTable('refresh', {});
                     }
-                    $("#fileName").text("");
+                    $("#file").val("");
                     $(".loading_container").hide();
                 },
                 error: function () {
                     alert('上传失败，请联系管理员');
                     $(".loading_container").hide();
                 },
-                url: 'fileUpload', /*设置post提交到的页面*/
+                url: 'batchFileUpload', /*设置post提交到的页面*/
                 type: "post", /*设置表单以post方法提交*/
                 dataType: "json" /*设置返回值类型为文本*/
             });
         });
     });
-    function checkFileSize(filepath) {
+    
+    function checkFileSizeByFile(file) {
         var daxiao= "${size}";
         daxiao= daxiao.replace("MB","");
-        // console.log(daxiao)
         var maxsize = daxiao * 1024 * 1024;
-        var errMsg = "上传的文件不能超过${size}喔！！！";
-        var tipMsg = "您的浏览器暂不支持上传，确保上传文件不要超过${size}，建议使用IE、FireFox、Chrome浏览器";
+        var errMsg = "上传的文件 [" + file.name + "] 不能超过${size}喔！！！";
+        
         try {
-            var filesize = 0;
-            var ua = window.navigator.userAgent;
-            if (ua.indexOf("MSIE") >= 1) {
-                //IE
-                var img = new Image();
-                img.src = filepath;
-                filesize = img.fileSize;
-            } else {
-                filesize = $("#file")[0].files[0].size; //byte
-            }
-            if (filesize > 0 && filesize > maxsize) {
+            if (file.size > 0 && file.size > maxsize) {
                 alert(errMsg);
-                return false;
-            } else if (filesize === -1) {
-                alert(tipMsg);
                 return false;
             }
         } catch (e) {
-            alert("上传失败，请重试");
+            alert("检查文件大小失败，请重试");
             return false;
         }
         return true;

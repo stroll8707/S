@@ -1,6 +1,9 @@
 package cn.keking.utils;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 
 /**
  * @author kl (http://kailing.pub)
@@ -22,5 +25,18 @@ public class DateUtils {
      */
     public static long calculateCurrentTimeDifference(long datetime) {
         return getCurrentSecond() - datetime;
+    }
+    
+    /**
+     * 将时间戳格式化为可读字符串
+     * @param timestamp 时间戳（毫秒）
+     * @return 格式化后的时间字符串
+     */
+    public static String formatTime(long timestamp) {
+        LocalDateTime dateTime = LocalDateTime.ofInstant(
+                Instant.ofEpochMilli(timestamp),
+                ZoneId.systemDefault()
+        );
+        return dateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
     }
 }
