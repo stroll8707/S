@@ -85,7 +85,7 @@ public class WebUtils {
         }
         if (!UrlEncoderUtils.hasUrlEncoded(fullFileName)) {  //判断文件名是否转义
             try {
-                urlStr = URLEncoder.encode(urlStr, "UTF-8").replaceAll("\\+", "%20").replaceAll("%3A", ":").replaceAll("%2F", "/").replaceAll("%3F", "?").replaceAll("%26", "&").replaceAll("%3D", "=");
+                urlStr = URLEncoder.encode(urlStr, "UTF-8").replaceAll("\\+", "%2B").replaceAll("%3A", ":").replaceAll("%2F", "/").replaceAll("%3F", "?").replaceAll("%26", "&").replaceAll("%3D", "=");
             } catch (UnsupportedEncodingException e) {
                 LOGGER.error("Failed to encode URL: {}", urlStr, e);
             }
